@@ -2,7 +2,7 @@
 
 A personal link-in-bio site you host yourself on Cloudflare. Bento-style grid, drag-and-drop editor, dub-style click analytics, and an AI assistant (Wizz) that builds and edits the page while you watch its cursor do it.
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/egebese/linkwizz)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/egebese/personal-cms)
 
 ## What you get
 
