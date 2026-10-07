@@ -14,6 +14,10 @@ const json = (data: unknown, status = 200, headers: Record<string, string> = {})
   new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json', ...headers } })
 const fail = (error: string, status = 400) => json({ error }, status)
 
+// Raster only: an SVG served from this origin could run script with the owner's session.
+const IMAGE_TYPES: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp', 'image/avif': 'avif' }
+const imageExt = (type: string | null) => IMAGE_TYPES[(type || '').split(';')[0].trim().toLowerCase()]
+
 export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url)
@@ -72,6 +76,9 @@ async function media(env: Env, key: string) {
   if (!obj) return new Response('Not found', { status: 404 })
   const h = new Headers({ 'cache-control': 'public, max-age=31536000, immutable', etag: obj.httpEtag })
   obj.writeHttpMetadata(h)
+  // Belt and braces: even if active content got in, the browser won't sniff or run it.
+  h.set('x-content-type-options', 'nosniff')
+  h.set('content-security-policy', "default-src 'none'; sandbox")
   return new Response(obj.body, { headers: h })
 }
 
@@ -80,10 +87,10 @@ async function mirror(env: Env, src: string): Promise<string> {
   if (!/^https?:/.test(src)) return src
   try {
     const r = await fetch(src, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) })
-    const type = r.headers.get('content-type') || ''
-    if (!r.ok || !type.startsWith('image/')) return src
-    const key = uid() + uid() + '.' + (type.split('/')[1].split(/[;+]/)[0] || 'img')
-    await env.MEDIA.put(key, r.body, { httpMetadata: { contentType: type } })
+    const ext = imageExt(r.headers.get('content-type'))
+    if (!r.ok || !ext) return src
+    const key = uid() + uid() + '.' + ext
+    await env.MEDIA.put(key, r.body, { httpMetadata: { contentType: 'image/' + (ext === 'jpg' ? 'jpeg' : ext) } })
     return '/media/' + key
   } catch { return src }
 }
@@ -122,12 +129,12 @@ async function api(req: Request, env: Env, ctx: ExecutionContext, url: URL): Pro
       return json({ ok: true, savedAt: Date.now() })
     }
     case 'POST /upload': {
-      const type = req.headers.get('content-type') || ''
-      if (!type.startsWith('image/')) return fail('Only images can be uploaded.')
+      const ext = imageExt(req.headers.get('content-type'))
+      if (!ext) return fail('Upload a PNG, JPEG, GIF, WebP or AVIF image.')
       const len = Number(req.headers.get('content-length') || 0)
       if (len > 10 * 1024 * 1024) return fail('Images must be under 10 MB.')
-      const key = uid() + uid() + '.' + (type.split('/')[1].split(/[;+]/)[0] || 'img')
-      await env.MEDIA.put(key, req.body, { httpMetadata: { contentType: type } })
+      const key = uid() + uid() + '.' + ext
+      await env.MEDIA.put(key, req.body, { httpMetadata: { contentType: 'image/' + (ext === 'jpg' ? 'jpeg' : ext) } })
       return json({ url: '/media/' + key })
     }
     case 'POST /unfurl': {
