@@ -1,0 +1,4 @@
+# Password for /admin
+ADMIN_PASSWORD=
+# fal.ai API key (https://fal.ai/dashboard/keys) for the AI assistant, onboarding and voice input
+FAL_KEY=

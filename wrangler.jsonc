@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "linkwizz",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // The worker runs first so it can serve public pages at "/<slug>" and pass static files to ASSETS.
+  "assets": { "binding": "ASSETS", "run_worker_first": true },
+  "d1_databases": [{ "binding": "DB", "database_name": "linkwizz" }],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "linkwizz-media" }],
+  "vars": { "AI_MODEL": "anthropic/claude-sonnet-4.6" },
+  "observability": { "enabled": true }
+}
